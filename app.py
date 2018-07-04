@@ -1,3 +1,4 @@
+import json
 import os
 import time
 
@@ -24,6 +25,22 @@ COL_NAME_MAP = {
 
 app = dash.Dash(__name__)
 server = app.server
+
+
+def get_trip_count(original_df):
+    """Utils function to get the dataframe containing the trip count for each trip, which is the combination of
+    a starting and an ending station"""
+    trip = original_df['start_station_code'].astype('str') + " " + original_df['end_station_code'].astype('str')
+    trip_count = pd.DataFrame(trip.value_counts(), columns=['trip_count'])
+    parsed_codes = pd.DataFrame([string.split(" ") for string in trip_count.index.values],
+                                columns=['start_station_code', 'end_station_code'])
+    trip_df = trip_count.reset_index().join(parsed_codes).set_index('index')
+
+    trip_df[['start_station_code', 'end_station_code']] = trip_df[['start_station_code', 'end_station_code']].astype(
+        int)
+    trip_df.sort_values(['start_station_code', 'end_station_code'], inplace=True, axis=0, ascending=True)
+
+    return trip_df
 
 
 def generate_figure_3d(data_df, sample=100000):
@@ -95,7 +112,7 @@ def generate_figure_2d(data_df, xaxis, yaxis, xaxis_name, yaxis_name, sample=100
         data.append(trace)
 
     layout = go.Layout(
-        title=f'Bixi Usage through June 2017, {data_df.shape[0]} data points plotted',
+        title=f'Bixi Usage in 2017, {data_df.shape[0]} trips plotted',
         margin=go.Margin(r=5),
         legend=dict(x=0, y=1.05, orientation="h"),
         xaxis=dict(title=xaxis_name),
@@ -114,8 +131,7 @@ if 'DYNO' in os.environ:
 app.layout = html.Div(children=[
     # .container class is fixed, .container.scalable is scalable
     html.Div(className="banner", children=[
-        # Change App Name here
-        html.H2('App Name'),
+        html.H2('Bixi Trips Explorer'),
 
         html.Img(
             src="https://s3-us-west-1.amazonaws.com/plotly-tutorials/logo/new-branding/dash-logo-by-plotly-stripe-inverted.png"
@@ -158,8 +174,15 @@ app.layout = html.Div(children=[
                     max=1000000,
                     step=None,
                     marks={i: i for i in [20000, 100000, 250000, 500000, 750000, 1000000]},
-                    value=500000
+                    value=100000
                 )
+            ]),
+
+            drc.Card(children=[
+                html.P("Click a data point to get more information..."),
+
+                html.Div(id='div-plot-click-result')
+
             ])
         ])
     ])
@@ -189,6 +212,40 @@ def update_graph(xaxis_value, yaxis_value, sample_size):
         yaxis_name=COL_NAME_MAP[yaxis_value],
         sample=sample_size
     )
+
+
+@app.callback(Output('div-plot-click-result', 'children'),
+              [Input('bixi-plot', 'clickData')],
+              [State('dropdown-selection-xaxis', 'value'),
+               State('dropdown-selection-yaxis', 'value')])
+def display_plot_click_message(clickData, xaxis_value, yaxis_value):
+    if clickData:
+        x = clickData['points'][0]['x']
+        y = clickData['points'][0]['y']
+
+        selected_series = data_df[(data_df[xaxis_value] == x) & (data_df[yaxis_value] == y)].iloc[0]
+
+        start_date = selected_series['start_date']
+        end_date = selected_series['end_date']
+        start_station_code = selected_series['start_station_code']
+        end_station_code = selected_series['end_station_code']
+        duration_sec = selected_series['duration_sec']
+        is_member = selected_series['is_member']
+
+        if is_member == 1:
+            membership_str = "The trip was effectuated by a Bixi member."
+        else:
+            membership_str = "The trip was not effectuated by a Bixi member."
+
+        return dcc.Markdown(f'''
+The trip started at the station {start_station_code}, on {start_date}.
+
+It ended at the station {end_station_code}, on {end_date}.
+
+It last {duration_sec} seconds.
+
+{membership_str}
+        ''')
 
 
 external_css = [

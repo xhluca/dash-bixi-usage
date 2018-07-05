@@ -7,3 +7,5 @@ dash-html-components==0.10.1
 dash-core-components==0.22.1
 
 # Additional
+pandas==0.20.3
+numpy==1.14.3

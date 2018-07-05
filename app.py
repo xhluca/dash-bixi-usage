@@ -43,47 +43,6 @@ def get_trip_count(original_df):
     return trip_df
 
 
-def generate_figure_3d(data_df, sample=100000):
-    sampled_df = data_df.sample(n=sample)
-
-    ls = list(sampled_df.groupby('is_member'))
-    name_map = {0: 'Not Member', 1: 'Member'}
-
-    data = []
-
-    for i in range(len(ls)):
-        name = name_map[i]
-        df = ls[i][1]
-
-        trace = go.Scatter3d(
-            x=df['start_station_code'],
-            y=df['end_station_code'],
-            z=df['duration_sec'],
-            mode='markers',
-            name=name,
-            marker=go.Marker(
-                symbol='circle',
-                opacity=0.7,
-                size=3
-            )
-        )
-
-        data.append(trace)
-
-    layout = go.Layout(
-        title=f'Usage of Bixi through 2017',
-        margin=go.Margin(l=5, r=5, b=5),
-        legend=dict(x=0, y=1.05, orientation="h"),
-        scene=dict(
-            xaxis=dict(title='Start Station'),
-            yaxis=dict(title='End Station'),
-            zaxis=dict(title='Duration (sec)')
-        )
-    )
-
-    return go.Figure(data=data, layout=layout)
-
-
 def generate_figure_2d(data_df, xaxis, yaxis, xaxis_name, yaxis_name, sample=10000):
 
     if data_df.shape[0] > sample:
@@ -140,7 +99,7 @@ app.layout = html.Div(children=[
 
 
     html.Div(id='body', className='container scalable', children=[
-        html.Div(className='seven columns', children=[
+        html.Div(className='seven columns unselect', children=[
             dcc.Graph(
                 id='bixi-plot',
                 style={'height': '85vh'}
@@ -148,7 +107,7 @@ app.layout = html.Div(children=[
         ]),
 
         html.Div(className='five columns', style={'float': 'right'}, children=[
-            drc.Card(children=[
+            drc.Card(className="unselect", children=[
                 drc.NamedDropdown(
                     name="Select a column to be the x-axis",
                     id='dropdown-selection-xaxis',
@@ -173,13 +132,13 @@ app.layout = html.Div(children=[
                     min=0,
                     max=1000000,
                     step=None,
-                    marks={i: i for i in [20000, 100000, 250000, 500000, 750000, 1000000]},
-                    value=100000
+                    marks={i: i for i in [20000, 250000, 500000, 750000, 1000000]},
+                    value=500000
                 )
             ]),
 
             drc.Card(children=[
-                html.P("Click a data point to get more information..."),
+                html.P("Click a data point to get more information...", id='p-display-message'),
 
                 html.Div(id='div-plot-click-result')
 
@@ -246,6 +205,14 @@ It last {duration_sec} seconds.
 
 {membership_str}
         ''')
+
+
+@app.callback(Output('p-display-message', 'style'), [Input('div-plot-click-result', 'children')])
+def hide_default_display_message(children):
+    if children:
+        return {'display': 'none'}
+    else:
+        return None
 
 
 external_css = [

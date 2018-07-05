@@ -4,6 +4,7 @@
 - Scalable Container
 - Remove Undo
 - Loading Screen
+- Unselect
 
 
 /* Banner
@@ -101,4 +102,15 @@
 @-o-keyframes fadein {
     from { opacity: 0; }
     to   { opacity: 1; }
+}
+
+
+/* Unselect - Remove possibility to select
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.unselect {
+    user-select: none;
+    -moz-user-select: none;
+    -khtml-user-select: none;
+    -webkit-user-select: none;
+    -o-user-select: none;
 }

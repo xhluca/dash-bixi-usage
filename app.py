@@ -154,15 +154,19 @@ def load_data():
 
     # If file doesn't exist, we download from the bixi website
     if not os.path.exists('data'):
+        print("Bixi Data file not found in path, initializing download...", end=' ')
         # Get the 2017 data
         r = requests.get('https://www.bixi.com/c/bixi/file_db/data_all.file/BixiMontrealRentals2017.zip')
         z = ZipFile(BytesIO(r.content))
         z.extractall(path='data')
+        print("Completed.")
 
     # Load Data
     data_df = pd.concat(
         [pd.read_csv(f"data/2017/OD_2017-{month:02d}.csv") for month in range(4, 11)]
     )
+
+    print("Data successfully loaded.")
 
 
 @app.callback(Output('bixi-plot', 'figure'),

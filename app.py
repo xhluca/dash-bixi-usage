@@ -1,17 +1,17 @@
-import json
 import os
-import time
+from io import BytesIO
+from textwrap import dedent
+from zipfile import ZipFile
 
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
-import numpy as np
 import plotly.graph_objs as go
+import requests
 from dash.dependencies import Input, Output, State
 
 import dash_reusable_components as drc
-
 
 COL_NAME_MAP = {
     # Maps the column name in the data_df to a more verbose name
@@ -152,9 +152,16 @@ app.layout = html.Div(children=[
 def load_data():
     global data_df
 
+    # If file doesn't exist, we download from the bixi website
+    if not os.path.exists('data'):
+        # Get the 2017 data
+        r = requests.get('https://www.bixi.com/c/bixi/file_db/data_all.file/BixiMontrealRentals2017.zip')
+        z = ZipFile(BytesIO(r.content))
+        z.extractall(path='data')
+
     # Load Data
     data_df = pd.concat(
-        [pd.read_csv(f"data/BixiMontrealRentals2017/OD_2017-{month:02d}.csv") for month in range(4, 11)]
+        [pd.read_csv(f"data/2017/OD_2017-{month:02d}.csv") for month in range(4, 11)]
     )
 
 
@@ -196,15 +203,17 @@ def display_plot_click_message(clickData, xaxis_value, yaxis_value):
         else:
             membership_str = "The trip was not effectuated by a Bixi member."
 
-        return dcc.Markdown(f'''
-The trip started at the station {start_station_code}, on {start_date}.
-
-It ended at the station {end_station_code}, on {end_date}.
-
-It last {duration_sec} seconds.
-
-{membership_str}
-        ''')
+        return dcc.Markdown(
+            dedent(f'''
+                The trip started at the station {start_station_code}, on {start_date}.
+                
+                It ended at the station {end_station_code}, on {end_date}.
+                
+                It last {duration_sec} seconds.
+                
+                {membership_str}
+            ''')
+        )
 
 
 @app.callback(Output('p-display-message', 'style'), [Input('div-plot-click-result', 'children')])

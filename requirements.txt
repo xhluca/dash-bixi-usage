@@ -9,3 +9,4 @@ dash-core-components==0.22.1
 # Additional
 pandas==0.20.3
 numpy==1.14.3
+requests==2.18.4
